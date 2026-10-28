@@ -1,0 +1,17 @@
+{
+  "name": "docker-todo-app",
+  "version": "1.0.0",
+  "description": "Dockerized Todo API with MongoDB",
+  "main": "app/server.js",
+  "scripts": {
+    "start": "node app/server.js",
+    "dev": "node app/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongoose": "^8.3.1"
+  }
+}
