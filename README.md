@@ -1,96 +1,215 @@
-﻿# Automated Cloud Deployment: Containerized Todo API with Nginx Reverse Proxy, Terraform, Ansible & GitHub Actions
+﻿Automated Cloud Deployment: Containerized Todo API
+An end-to-end DevOps project that deploys a containerized Todo REST API to AWS EC2 using Docker Compose, Nginx, Terraform, Ansible, and GitHub Actions.
 
-An end-to-end DevOps project demonstrating Infrastructure as Code (IaC), automated server configuration management, containerized multi-tier microservices, and a continuous integration / continuous deployment (CI/CD) pipeline on AWS.
+The project demonstrates Infrastructure as Code (IaC), automated server configuration, reverse-proxy routing, persistent database storage, and CI/CD automation.
+Architecture
+                         Internet
+                            |
+                         HTTP :80
+                            |
+                     AWS EC2 (Ubuntu)
+                            |
+                    +-------v-------+
+                    |     Nginx     |
+                    | Reverse Proxy |
+                    +-------+-------+
+                            |
+                  Internal Docker network
+                            |
+                    +-------v-------+
+                    |  Node.js API   |
+                    | Express :3000  |
+                    +-------+-------+
+                            |
+                    +-------v-------+
+                    |    MongoDB     |
+                    |    :27017      |
+                    +-------+--------+
+                            |
+                    Named Docker volume
+                    (persistent data)
+Only Nginx is intended to accept public HTTP traffic. The API and MongoDB should remain on the internal Docker network and should not have public host ports exposed.
+Technology Stack
+Area	Tools
+Cloud	AWS EC2, VPC security groups
+Infrastructure as Code	Terraform
+Configuration management	Ansible
+Containerization	Docker, Docker Compose
+Reverse proxy	Nginx
+Backend	Node.js, Express.js, Mongoose
+Database	MongoDB 7
+CI/CD	GitHub Actions
+Container registry	Docker Hub
 
----
 
-## 🏗️ Architecture Overview
-Internet (HTTP:80)│▼┌─────────────────────────────────────────────────────────────┐│ AWS EC2 (Ubuntu 22.04 LTS / ap-south-1)                     ││                                                             ││   ┌───────────────┐     Internal Docker Network             ││   │     Nginx     │────────────────────────────┐            ││   │ Reverse Proxy │                            │            ││   └───────────────┘                            ▼            ││          ▲                              ┌─────────────┐     ││          │                              │   Node.js   │     ││     Port 80 Ingress                     │   CRUD API  │     ││                                         └─────────────┘     ││                                                │            ││                                                ▼            ││                                         ┌─────────────┐     ││                                         │   MongoDB   │     ││                                         │   Database  │     ││                                         └─────────────┘     ││                                                │            ││                                         Named Docker Volume ││                                         (mongo_prod_data)   │└─────────────────────────────────────────────────────────────┘
-1. **Client / Web Traffic**: Directs HTTP requests on standard port `80` to the AWS EC2 instance.
-2. **Reverse Proxy (Nginx)**: Listens on port `80` and proxies traffic to the internal Node.js container (`api:3000`). Neither the Node.js API port nor MongoDB port `27017` are exposed directly to the internet.
-3. **Application Layer (Node.js & Express)**: Handles RESTful CRUD routing and connects to MongoDB via Mongoose.
-4. **Database Layer (MongoDB 7.0)**: Manages persistence using named Docker volumes (`mongo_data` locally, `mongo_prod_data` in production) to ensure zero data loss across container restarts or redeployments.
-5. **Infrastructure as Code (Terraform)**: Declares and provisions the EC2 instance, security groups, and SSH key pairs in AWS `ap-south-1`.
-6. **Configuration Management (Ansible)**: Automates package updates, Docker repository registration, Docker engine / compose installation, and user group assignments.
-7. **CI/CD Pipeline (GitHub Actions)**: Builds application container images on git push, publishes to Docker Hub, connects via SSH to the server, and initiates rolling updates with Docker Compose.
-
----
-
-## 🛠️ Tech Stack
-
-| Domain | Technology / Tool |
-| :--- | :--- |
-| **Backend API** | Node.js, Express.js, Mongoose ODM |
-| **Database** | MongoDB 7.0 |
-| **Reverse Proxy** | Nginx (Alpine-based official image) |
-| **Containerization** | Docker, Docker Compose (v2) |
-| **Infrastructure as Code** | HashiCorp Terraform |
-| **Configuration Management** | Ansible |
-| **Cloud Provider** | Amazon Web Services (AWS EC2, VPC Security Groups) |
-| **CI/CD Platform** | GitHub Actions |
-| **Container Registry** | Docker Hub |
-
----
-
-## 📂 Project Structure
-
-```text
+Project Structure
 docker-todo-app/
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml            # Automated CI/CD build, push, & deploy workflow
+│       └── deploy.yml
 ├── ansible/
-│   ├── inventory.ini             # Server inventory configuration
-│   └── playbook.yml              # Server Docker installation playbook
+│   ├── inventory.ini
+│   └── playbook.yml
 ├── nginx/
-│   └── nginx.conf                # Nginx reverse proxy routing configuration
+│   └── nginx.conf
 ├── terraform/
-│   ├── main.tf                   # AWS EC2 & Security Group provisioning
-│   ├── outputs.tf                # EC2 public IP output declaration
-│   └── variables.tf              # Region and key path definitions
-├── .gitignore                    # Excludes node_modules, keys, and tfstate files
-├── docker-compose.yml            # Local development compose configuration
-├── docker-compose.prod.yml       # Production compose configuration (with Nginx)
-├── Dockerfile                    # Container build instructions for Node.js API
-├── package.json                  # Node.js project manifest & dependencies
-└── server.js                     # Express app setup and CRUD routes
-🔌 API EndpointsAll external requests enter through port 80 via Nginx:MethodEndpointDescriptionSample Request BodyPOST/todosCreate a new todo task{"title": "Deploy to AWS"}GET/todosRetrieve all todo itemsNonePUT/todos/:idUpdate status of a todo{"completed": true}DELETE/todos/:idRemove a todo by IDNone🚀 Setup & Deployment GuidePrerequisitesDocker Desktop installed and runningAWS CLI configured (aws configure) with valid credentialsTerraform CLI (v1.5+)An SSH key pair generated at ~/.ssh/todo_deploy_keyStep 1: Local Development & VerificationClone the repository:Bashgit clone [https://github.com/AmanDharpure/docker-todo-app.git](https://github.com/AmanDharpure/docker-todo-app.git)
+│   ├── main.tf
+│   ├── variables.tf
+│   └── outputs.tf
+├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
+├── docker-compose.prod.yml
+├── package.json
+└── server.js
+Features
+- REST API endpoints to create, list, update, and delete Todo items.
+- Multi-container deployment using Docker Compose.
+- Nginx reverse proxy for HTTP traffic on port 80.
+- MongoDB persistence through a named Docker volume.
+- AWS infrastructure provisioned with Terraform.
+- Docker installation and host setup automated using Ansible.
+- GitHub Actions workflow to build and publish the API image to Docker Hub, then deploy it to EC2 over SSH.
+- Separation of local development and production Compose configuration.
+API Endpoints
+All production requests should enter through Nginx on port 80.
+Method	Endpoint	Purpose	Example body
+POST	/todos	Create a Todo	{"title":"Deploy to AWS"}
+GET	/todos	List Todo items	None
+PUT	/todos/:id	Update a Todo	{"completed":true}
+DELETE	/todos/:id	Delete a Todo	None
+
+
+The exact request body and response format depend on the implementation in server.js.
+Prerequisites
+Install or configure the following tools:
+- Git
+- Docker Desktop for local development
+- AWS CLI
+- Terraform
+- An SSH key pair that can access the EC2 instance
+- An AWS account with permission to create the resources defined in Terraform
+- A Docker Hub account and a GitHub repository
+For AWS CLI authentication, use an appropriate profile or aws configure. Never commit AWS credentials or private SSH keys to Git.
+1. Clone the Repository
+git clone https://github.com/AmanDharpure/docker-todo-app.git
 cd docker-todo-app
-Start the local multi-container stack:Bashdocker compose up -d
-Verify CRUD operations locally:Bashcurl -X POST http://localhost:3000/todos \
+2. Run Locally
+Make sure Docker Desktop is running, then start the development stack:
+docker compose up -d --build
+docker compose ps
+docker compose logs -f
+Test the API. The following commands assume the development Compose file publishes the API on localhost:3000:
+curl -X POST http://localhost:3000/todos \
   -H "Content-Type: application/json" \
-  -d '{"title": "Local MongoDB persistence test"}'
+  -d '{"title":"Local persistence test"}'
 
 curl http://localhost:3000/todos
-Confirm data persistence across container recreation:Bashdocker compose down
+Test persistence by recreating the containers without deleting named volumes:
+docker compose down
 docker compose up -d
 curl http://localhost:3000/todos
-Step 2: Provision Cloud Infrastructure (Terraform)Navigate to the Terraform directory:Bashcd terraform
-Initialize provider plugins and deploy resources:Bashterraform init
-terraform apply -auto-approve
-Note the generated public IP address:Plaintextserver_public_ip = "<YOUR_SERVER_PUBLIC_IP>"
-Step 3: Server Configuration (Ansible)Update ansible/inventory.ini with your provisioned IP:Ini, TOML[app_servers]
-todo_server ansible_host=<YOUR_SERVER_PUBLIC_IP> ansible_user=ubuntu ansible_ssh_private_key_file=/root/.ssh/todo_deploy_key
-Run the playbook inside a container (resolves Windows SSH permission handling):Bashdocker run --rm \
-  -v "$HOME/.ssh:/tmp/keys:ro" \
-  -v "$(pwd)/ansible:/ansible" \
-  -w /ansible \
-  williamyeh/ansible:ubuntu18.04 \
-  bash -c "mkdir -p /root/.ssh && cp /tmp/keys/todo_deploy_key /root/.ssh/todo_deploy_key && chmod 600 /root/.ssh/todo_deploy_key && ansible-playbook -i inventory.ini playbook.yml --ssh-common-args='-o StrictHostKeyChecking=no'"
-Step 4: Configure GitHub SecretsAdd the following repository secrets under Settings > Secrets and variables > Actions:Secret NameDescriptionDOCKERHUB_USERNAMEYour Docker Hub account usernameDOCKERHUB_TOKENDocker Hub Personal Access Token (Read & Write permissions)SERVER_HOSTPublic IP of the deployed EC2 serverSERVER_USERServer username (ubuntu)SSH_PRIVATE_KEYContents of your private key (~/.ssh/todo_deploy_key)Step 5: Automated CI/CD DeploymentPush changes to the main branch to trigger the pipeline:Bashgit add .
-git commit -m "feat: complete end-to-end cloud deployment"
-git push origin main
-Workflow Stages:Build & Push: Builds the production Docker image and pushes it to Docker Hub.Deploy: Authenticates via SSH into the EC2 instance, syncs docker-compose.prod.yml and nginx/nginx.conf, pulls the latest Docker image, and restarts the containers with zero downtime.🧪 Testing the Live ApplicationExecute requests against the EC2 instance on port 80:Bash# Create a task through Nginx
-curl -X POST http://<YOUR_SERVER_PUBLIC_IP>/todos \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Live task running on AWS EC2"}'
+Data warning: docker compose down -v removes Compose-managed named volumes and can delete local database data. Use it only when you intentionally want to remove that data.
 
-# Retrieve all tasks
-curl http://<YOUR_SERVER_PUBLIC_IP>/todos
-Or view the output directly in a browser at:Plaintexthttp://<YOUR_SERVER_PUBLIC_IP>/todos
-To inspect container health and logs directly on the server:Bashssh -i ~/.ssh/todo_deploy_key ubuntu@<YOUR_SERVER_PUBLIC_IP>
-cd ~/app
-docker compose ps
-docker compose logs -f nginx
-🧹 Infrastructure TeardownTo avoid ongoing AWS cloud charges when the environment is no longer required:Bashcd terraform
-terraform destroy -auto-approve
+3. Provision AWS Infrastructure with Terraform
+Review the Terraform configuration before applying it. Confirm the AWS region, instance type, AMI, SSH key configuration, and security-group rules.
+cd terraform
+terraform init
+terraform fmt -check
+terraform validate
+terraform plan
+terraform apply
+Review the plan and confirm the changes when prompted. Retrieve the public IP from the configured output:
+terraform output
+Use the actual output from your deployment; do not rely on an IP address copied from an example.
+
+Security checklist:
+- Allow SSH (port 22) only from your trusted IP where possible.
+- Allow HTTP (port 80) for public access if required.
+- Do not expose MongoDB port 27017 or the Node.js application port 3000 publicly.
+- Store SSH private keys and cloud credentials securely.
+4. Configure the Server with Ansible
+Update ansible/inventory.ini with the public IP of your EC2 instance and the correct SSH private-key path. For example:
+[app_servers]
+todo_server ansible_host=YOUR_EC2_PUBLIC_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/todo_deploy_key
+Run the playbook from the project root using your installed Ansible:
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+If Ansible is not installed locally, you can run it in a container. Adjust the key mount path and container image to match your environment. Verify the playbook's compatibility with the target Ubuntu version before running it.
+5. Configure GitHub Actions Secrets
+In your GitHub repository, open Settings → Secrets and variables → Actions and add the secrets expected by .github/workflows/deploy.yml.
+Secret	Purpose
+DOCKERHUB_USERNAME	Docker Hub username
+DOCKERHUB_TOKEN	Docker Hub access token with required permissions
+SERVER_HOST	Public IP or hostname of the EC2 instance
+SERVER_USER	SSH username, commonly ubuntu for Ubuntu EC2 images
+SSH_PRIVATE_KEY	Private-key contents used by the workflow to connect to EC2
+
+
+The secret names above must match the names referenced in the workflow. Never put secret values in the README, source code, logs, or commits.
+6. Deploy with GitHub Actions
+After reviewing the workflow and configuring the required secrets, commit and push your changes:
+git add .
+git commit -m "feat: automate cloud deployment"
+git push origin main
+The intended workflow is:
+1. Trigger on a push to the configured branch.
+2. Build the application Docker image.
+3. Authenticate to Docker Hub and push the image.
+4. Connect to the EC2 host over SSH.
+5. Update the production Compose and Nginx configuration files.
+6. Pull the updated image and recreate the services.
+Check the Actions tab in GitHub to review job logs and troubleshoot failures.
+Deployment note: Recreating containers with Docker Compose is not automatically a zero-downtime rolling deployment. Actual downtime depends on the deployment strategy, health checks, and traffic-routing setup. Describe the pipeline as automated deployment unless zero downtime has been tested and demonstrated.
+
+7. Test the Production Deployment
+Replace YOUR_EC2_PUBLIC_IP with the current public IP or DNS name of your server:
+curl -i http://YOUR_EC2_PUBLIC_IP/todos
+Create a Todo:
+curl -X POST http://YOUR_EC2_PUBLIC_IP/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Live task on AWS"}'
+Retrieve Todo items:
+curl http://YOUR_EC2_PUBLIC_IP/todos
+Connect to the instance and inspect the services:
+ssh -i ~/.ssh/todo_deploy_key ubuntu@YOUR_EC2_PUBLIC_IP
+From the deployment directory on the server:
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f nginx
+docker compose -f docker-compose.prod.yml logs -f api
+Use the actual service names and deployment directory from your Compose configuration. If a request fails, check the EC2 security group, instance status, Nginx configuration, container health, application logs, and MongoDB connectivity.
+8. Troubleshooting
+Symptom	What to check
+Cannot connect to the server	EC2 state, public IP, route, security-group rules, SSH key and username
+HTTP connection refused or times out	Port 80 ingress, Nginx container status and host port mapping
+Nginx returns 502 Bad Gateway	Upstream service name, API port, container network and API logs
+API cannot connect to MongoDB	MongoDB service name, Compose network, credentials and application connection URI
+Todo items disappear	Named-volume configuration and whether the volume was removed
+GitHub Actions deployment fails	Secret names, SSH key format, Docker Hub permissions and workflow logs
+
+
+9. Clean Up AWS Resources
+When the environment is no longer needed, destroy resources created by Terraform to avoid ongoing charges:
+cd terraform
+terraform plan -destroy
+terraform destroy
+Review the destroy plan before confirming. Terraform only destroys resources managed by the current state; manually created or separately managed resources may remain. Back up any data you need before removing infrastructure or volumes.
+What I Learned
+- Building and running a multi-container application with Docker Compose.
+- Routing external HTTP traffic through Nginx to an internal API.
+- Persisting database data using Docker named volumes.
+- Provisioning cloud infrastructure with Terraform.
+- Automating host configuration with Ansible.
+- Building a CI/CD pipeline with GitHub Actions and Docker Hub.
+- Securing access to cloud hosts and troubleshooting deployment issues.
+Future Improvements
+- Add automated unit and API integration tests to the CI pipeline.
+- Add container health checks and deployment rollback.
+- Use HTTPS with managed certificates and a domain name.
+- Add centralized monitoring, logging, and alerting.
+- Use AWS Systems Manager or a managed secret store where appropriate.
+- Improve deployment strategy to minimize or eliminate downtime.
+Author
+Aman Dharpure
+- GitHub: AmanDharpure
+- Repository: docker-todo-app
+This repository documents a learning project. Deployment behavior, security, and availability depend on the actual configuration and should be verified in the target AWS environment.
