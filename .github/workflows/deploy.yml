@@ -37,19 +37,21 @@ jobs:
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          cat << 'EOF' > ~/.ssh/id_rsa
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          EOF
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy Production Configs to Server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p ~/app/nginx"
-          scp docker-compose.prod.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/docker-compose.yml
-          scp nginx/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/nginx/nginx.conf
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p ~/app/nginx"
+          scp -i ~/.ssh/id_rsa docker-compose.prod.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/docker-compose.yml
+          scp -i ~/.ssh/id_rsa nginx/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/nginx/nginx.conf
 
       - name: Pull and Deploy with Docker Compose
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             cd ~/app &&
             export DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' &&
             docker compose pull &&
